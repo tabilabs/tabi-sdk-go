@@ -1,0 +1,12 @@
+.idea/
+.vscode/
+
+.DS_Store
+.env
+
+config/local.toml
+
+build/
+test/
+keyring-dir/
+
