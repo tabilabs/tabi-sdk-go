@@ -1,6 +1,6 @@
 module github.com/tabilabs/tabi-sdk-go
 
-go 1.22.3
+go 1.20
 
 require (
 	github.com/BurntSushi/toml v1.2.1
