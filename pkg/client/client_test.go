@@ -28,7 +28,7 @@ func TestSdkClientTestSuite(t *testing.T) {
 }
 
 func (suite *ClientTestSuite) SetupTest() {
-	c, err := client.NewClient()
+	c, err := client.NewClient("../../config/template.toml")
 	if err != nil {
 		suite.FailNow(err.Error())
 	}

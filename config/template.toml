@@ -8,7 +8,7 @@ fee_amount = "8000000000000000"
 fee_denom = "atabi"
 
 [keyring]
-dir = "SET YOUR KEYRING DIR"
+dir = "../../keyring-dir"
 backend = "test"
 
 [[accounts]]

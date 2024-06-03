@@ -50,13 +50,8 @@ type Client struct {
 	ClaimsQueryClient       claimstypes.QueryClient
 }
 
-// NewClient creates a new client with default config path.
-func NewClient() (*Client, error) {
-	return newClient()
-}
-
-// NewClientWithConfigPath creates a new client with config path.
-func NewClientWithConfigPath(path string) (*Client, error) {
+// NewClient creates a new client with config path.
+func NewClient(path string) (*Client, error) {
 	config.ReadConfig(path)
 	return newClient()
 }

@@ -8,9 +8,7 @@ The SDK uses a keyring to manage your keys, which are stored in the `keyring-dir
 
 ## Quick Start
 
-Configure the SDK client using the `./config/config.toml` file, which is the default path for the client configuration.
-
-A template file is provided for convenience. You can copy it to your project and modify it as needed.
+Configure the SDK client using the `./config/template.toml` file and place it to your local dir as needed.
 
 ```toml
 [chain]
@@ -41,9 +39,7 @@ account_index = 1
 address_index = 0
 ```
 
-Create a new client instance with `NewClient()` or `NewClientWithConfigPath()` and use it to send transactions.
-
-Note that `NewClient()` use the default configuration file path `./config/config.toml` while `NewClientWithConfigPath()` allows you to specify a custom path.
+Create a new client instance with `NewClient()` and use it to send transactions.
 
 ```go
 package main
@@ -57,7 +53,7 @@ import (
 )
 
 func main() {
-	client := client.NewClient()
+	client := client.NewClient("path-to-config")
 
 	msgs := []sdk.Msg{
 		&types.MsgSend{

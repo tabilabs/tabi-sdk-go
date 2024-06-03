@@ -1,9 +1,6 @@
 package config
 
 import (
-	"path/filepath"
-	"runtime"
-
 	"github.com/BurntSushi/toml"
 )
 
@@ -42,13 +39,6 @@ type Tx struct {
 var (
 	ClientConfig Config
 )
-
-func init() {
-	_, b, _, _ := runtime.Caller(0)
-	basePath := filepath.Dir(b)
-	configPath := filepath.Join(basePath, "./../../config/config.toml")
-	ReadConfig(configPath)
-}
 
 // ReadConfig reads the config file and sets the ClientConfig
 func ReadConfig(path string) {
