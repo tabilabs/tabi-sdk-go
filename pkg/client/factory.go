@@ -48,7 +48,7 @@ func (f *TxFactory) RetrieveSeqAndNum(c *Client, addr string) error {
 
 	// unpack and set num and seq
 	var acc authtypes.AccountI
-	if err := c.EncodingConfig.InterfaceRegistry.UnpackAny(resp.Account, &acc); err != nil {
+	if err := c.InterfaceRegistry.UnpackAny(resp.Account, &acc); err != nil {
 		return err
 	}
 
@@ -60,7 +60,7 @@ func (f *TxFactory) RetrieveSeqAndNum(c *Client, addr string) error {
 
 // BuildUnsignedTx creates a new unsigned transaction
 func (f *TxFactory) BuildUnsignedTx(c *Client, msgs []sdk.Msg) (client.TxBuilder, error) {
-	tx := c.EncodingConfig.TxConfig.NewTxBuilder()
+	tx := c.TxConfig.NewTxBuilder()
 	if err := tx.SetMsgs(msgs...); err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (f *TxFactory) SignTx(c *Client, name string, txBuilder client.TxBuilder) e
 		return err
 	}
 
-	bytesToSign, err := c.EncodingConfig.TxConfig.SignModeHandler().GetSignBytes(f.signMode, signerData, txBuilder.GetTx())
+	bytesToSign, err := c.TxConfig.SignModeHandler().GetSignBytes(f.signMode, signerData, txBuilder.GetTx())
 	if err != nil {
 		return err
 	}

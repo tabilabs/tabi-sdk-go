@@ -6,19 +6,24 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cosmos/cosmos-sdk/codec"
 	"google.golang.org/grpc"
 
+	rpcclient "github.com/tendermint/tendermint/rpc/client"
+
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/simapp/params"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+
 	taibapp "github.com/tabilabs/tabi/app"
 	tabihd "github.com/tabilabs/tabi/crypto/hd"
-	tabiencoding "github.com/tabilabs/tabi/encoding"
+	tabiencodec "github.com/tabilabs/tabi/encoding/codec"
 	captainstypes "github.com/tabilabs/tabi/x/captains/types"
 	claimstypes "github.com/tabilabs/tabi/x/claims/types"
 	minttypes "github.com/tabilabs/tabi/x/mint/types"
@@ -28,12 +33,14 @@ import (
 )
 
 type Client struct {
-	clientcfg config.Config
+	Config config.Config
 
-	conn *grpc.ClientConn
-
-	EncodingConfig params.EncodingConfig
-	Keyring        keyring.Keyring
+	GRPCConn          *grpc.ClientConn
+	RPCClient         rpcclient.Client
+	InterfaceRegistry codectypes.InterfaceRegistry
+	Codec             codec.Codec
+	TxConfig          sdkclient.TxConfig
+	Keyring           keyring.Keyring
 
 	// accounts
 	Accounts map[string]string
@@ -57,12 +64,14 @@ func NewClient(path string) (*Client, error) {
 	return newClient()
 }
 
+// newClient creates a new client.
 func newClient() (*Client, error) {
 	var c Client
 
-	c.clientcfg = config.ClientConfig
-	c.EncodingConfig = tabiencoding.MakeConfig(taibapp.ModuleBasics)
+	c.Config = config.ClientConfig
 	c.Accounts = make(map[string]string)
+
+	c.initEncodingConfig()
 
 	err := c.dial()
 	if err != nil {
@@ -84,11 +93,45 @@ func newClient() (*Client, error) {
 	return &c, nil
 }
 
+// initEncodingConfig initializes the encoding config.
+func (c *Client) initEncodingConfig() {
+	interfaceRegistry := codectypes.NewInterfaceRegistry()
+	codec := codec.NewProtoCodec(interfaceRegistry)
+
+	c.InterfaceRegistry = interfaceRegistry
+	c.Codec = codec
+	c.TxConfig = authtx.NewTxConfig(codec, authtx.DefaultSignModes)
+
+	tabiencodec.RegisterInterfaces(c.InterfaceRegistry)
+	taibapp.ModuleBasics.RegisterInterfaces(c.InterfaceRegistry)
+}
+
+// initChainClients initializes the client.
+func (c *Client) initChainClients() error {
+	rpcClient, err := sdkclient.NewClientFromNode(c.Config.Chain.NodeAddr)
+	if err != nil {
+		return err
+	}
+
+	c.RPCClient = rpcClient
+	c.TxClient = tx.NewServiceClient(c.GRPCConn)
+
+	c.AuthQueryClient = authtypes.NewQueryClient(c.GRPCConn)
+	c.BankQueryClient = banktypes.NewQueryClient(c.GRPCConn)
+	c.MintQueryClient = minttypes.NewQueryClient(c.GRPCConn)
+	c.CaptainsQueryClient = captainstypes.NewQueryClient(c.GRPCConn)
+	c.TokenConvertQueryClient = tokenconverttypes.NewQueryClient(c.GRPCConn)
+	c.ClaimsQueryClient = claimstypes.NewQueryClient(c.GRPCConn)
+
+	return nil
+}
+
+// dial dials the gRPC connection.
 func (c *Client) dial() error {
 	dialOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDefaultCallOptions(
-			grpc.ForceCodec(codec.NewProtoCodec(c.EncodingConfig.InterfaceRegistry).GRPCCodec()),
+			grpc.ForceCodec(codec.NewProtoCodec(c.InterfaceRegistry).GRPCCodec()),
 		),
 	}
 
@@ -97,19 +140,8 @@ func (c *Client) dial() error {
 	if err != nil {
 		return err
 	}
-	c.conn = clientConn
+	c.GRPCConn = clientConn
 	return nil
-}
-
-// Init initializes the client.
-func (c *Client) initChainClients() {
-	c.TxClient = tx.NewServiceClient(c.conn)
-	c.AuthQueryClient = authtypes.NewQueryClient(c.conn)
-	c.BankQueryClient = banktypes.NewQueryClient(c.conn)
-	c.MintQueryClient = minttypes.NewQueryClient(c.conn)
-	c.CaptainsQueryClient = captainstypes.NewQueryClient(c.conn)
-	c.TokenConvertQueryClient = tokenconverttypes.NewQueryClient(c.conn)
-	c.ClaimsQueryClient = claimstypes.NewQueryClient(c.conn)
 }
 
 // InitKeyring initializes the Keyring.
@@ -118,7 +150,7 @@ func (c *Client) initKeyring() error {
 		keyring.BackendTest,
 		config.ClientConfig.Keyring.Dir,
 		strings.NewReader(""),
-		c.EncodingConfig.Codec,
+		c.Codec,
 		[]keyring.Option{tabihd.EthSecp256k1Option()}...)
 	if err != nil {
 		return err
@@ -142,12 +174,12 @@ func (c *Client) initAccounts() error {
 			return err
 		}
 
-		pubkey, err := record.GetPubKey()
+		pubKey, err := record.GetPubKey()
 		if err != nil {
 			return err
 		}
 
-		addr := sdk.AccAddress(pubkey.Address().Bytes()).String()
+		addr := sdk.AccAddress(pubKey.Address().Bytes()).String()
 		c.Accounts[acc.Name] = addr
 	}
 	return nil
@@ -172,7 +204,7 @@ func (c *Client) SendTx(msgs []sdk.Msg, from string) (string, error) {
 		return "", err
 	}
 
-	txBytes, err := c.EncodingConfig.TxConfig.TxEncoder()(txBuilder.GetTx())
+	txBytes, err := c.TxConfig.TxEncoder()(txBuilder.GetTx())
 	if err != nil {
 		return "", err
 	}

@@ -27,6 +27,7 @@ type Account struct {
 type Chain struct {
 	ChainId  string `toml:"chain_id"`
 	GrpcAddr string `toml:"grpc_addr"`
+	NodeAddr string `toml:"node_addr"`
 }
 
 type Tx struct {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/stretchr/testify/suite"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -28,7 +29,7 @@ func TestSdkClientTestSuite(t *testing.T) {
 }
 
 func (suite *ClientTestSuite) SetupTest() {
-	c, err := client.NewClient("../../config/template.toml")
+	c, err := client.NewClient("../../config/local.toml")
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
@@ -43,11 +44,11 @@ func (suite *ClientTestSuite) TestSendTx() {
 	}{
 		{
 			"bank send",
-			"alice0",
+			"node0",
 			[]sdk.Msg{&banktypes.MsgSend{
-				FromAddress: suite.client.Accounts["alice0"],
-				ToAddress:   suite.client.Accounts["alice1"],
-				Amount:      sdk.Coins{sdk.NewInt64Coin("atabi", 100000000000)},
+				FromAddress: suite.client.Accounts["node0"],
+				ToAddress:   suite.client.Accounts["committer"],
+				Amount:      sdk.Coins{sdk.NewCoin("atabi", sdk.MustNewDecFromStr("10000000000000000").RoundInt())},
 			},
 			},
 		},
@@ -62,22 +63,40 @@ func (suite *ClientTestSuite) TestSendTx() {
 	}
 }
 
-func (suite *ClientTestSuite) TestQueryBank() {
+func (suite *ClientTestSuite) TestGetTx() {
+	testCases := []struct {
+		name   string
+		txHash string
+	}{
+		{
+			"get tx",
+			"F2C06FDB1EDB4CC9E335E16048A032C94070B019EB58436EC6B4A76CEE7031C3",
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			resp, err := suite.client.TxClient.GetTx(context.Background(), &tx.GetTxRequest{Hash: tc.txHash})
+			suite.Require().NoError(err)
+			suite.Require().Equal(uint32(0), resp.TxResponse.Code)
+			//suite.T().Logf("TxResponse: %v", resp.TxResponse)
+
+			resp2, err := suite.client.RPCClient.Tx(context.Background(), []byte(tc.txHash), false)
+			suite.Require().NoError(err)
+			suite.T().Logf("Response: %v", resp2)
+		})
+	}
+}
+
+func (suite *ClientTestSuite) TestQueryBalances() {
 	testCases := []struct {
 		name string
 		req  *banktypes.QueryBalanceRequest
 	}{
 		{
-			name: "alice0 balances",
+			name: "committer balances",
 			req: &banktypes.QueryBalanceRequest{
-				Address: suite.client.Accounts["alice0"],
-				Denom:   "atabi",
-			},
-		},
-		{
-			name: "alice1 balances",
-			req: &banktypes.QueryBalanceRequest{
-				Address: suite.client.Accounts["alice1"],
+				Address: suite.client.Accounts["committer"],
 				Denom:   "atabi",
 			},
 		},
