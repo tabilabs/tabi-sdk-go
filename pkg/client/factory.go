@@ -5,14 +5,11 @@ import (
 	"errors"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
-	"github.com/tabilabs/tabi-sdk-go/pkg/config"
-	"google.golang.org/grpc"
-
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	"github.com/tabilabs/tabi-sdk-go/pkg/config"
 )
 
 // TxFactory is a simplified version of sdk.TxFactory, supporting only direct signing mode.
@@ -44,8 +41,7 @@ func DefaultTxFactory() *TxFactory {
 // RetrieveSeqAndNum retrieves accountNumber and sequence from chain
 func (f *TxFactory) RetrieveSeqAndNum(c *Client, addr string) error {
 	resp, err := c.AuthQueryClient.Account(context.Background(),
-		&authtypes.QueryAccountRequest{Address: addr},
-		grpc.ForceCodec(codec.NewProtoCodec(c.EncodingConfig.InterfaceRegistry).GRPCCodec()))
+		&authtypes.QueryAccountRequest{Address: addr})
 	if err != nil {
 		return err
 	}

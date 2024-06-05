@@ -1,10 +1,12 @@
 package client
 
+import "C"
 import (
 	"context"
 	"fmt"
 	"strings"
 
+	"github.com/cosmos/cosmos-sdk/codec"
 	"google.golang.org/grpc"
 
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
@@ -14,7 +16,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-
 	taibapp "github.com/tabilabs/tabi/app"
 	tabihd "github.com/tabilabs/tabi/crypto/hd"
 	tabiencoding "github.com/tabilabs/tabi/encoding"
@@ -86,6 +87,9 @@ func newClient() (*Client, error) {
 func (c *Client) dial() error {
 	dialOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
+		grpc.WithDefaultCallOptions(
+			grpc.ForceCodec(codec.NewProtoCodec(c.EncodingConfig.InterfaceRegistry).GRPCCodec()),
+		),
 	}
 
 	clientConn, err := grpc.Dial(config.ClientConfig.Chain.GrpcAddr, dialOpts...)

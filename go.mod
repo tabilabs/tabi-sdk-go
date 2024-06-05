@@ -6,7 +6,7 @@ require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/cosmos/cosmos-sdk v0.46.15
 	github.com/stretchr/testify v1.8.2
-	github.com/tabilabs/tabi v1.0.0-alpha1
+	github.com/tabilabs/tabi v1.0.0-alpha2
 	google.golang.org/grpc v1.54.0
 )
 
@@ -186,6 +186,8 @@ replace (
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// replace broken goleveldb
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
+
+	github.com/tabilabs/tabi => /Users/taramaorisky/Codeland/cosmos/tabilabs/tabi
 	// use cometbft
 	github.com/tendermint/tendermint => github.com/cometbft/cometbft v0.34.29
 )
