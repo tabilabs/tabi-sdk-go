@@ -186,27 +186,27 @@ func (c *Client) initAccounts() error {
 }
 
 // SendTx broadcasts the transaction but accept msgs.
-func (c *Client) SendTx(msgs []sdk.Msg, from string) (string, error) {
+func (c *Client) SendTx(msgs []sdk.Msg, from string) (*tx.BroadcastTxResponse, error) {
 	factory := DefaultTxFactory()
 
 	err := factory.RetrieveSeqAndNum(c, c.Accounts[from])
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	txBuilder, err := factory.BuildUnsignedTx(c, msgs)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	err = factory.SignTx(c, from, txBuilder)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	txBytes, err := c.TxConfig.TxEncoder()(txBuilder.GetTx())
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	grpcRes, err := c.TxClient.BroadcastTx(
@@ -217,8 +217,8 @@ func (c *Client) SendTx(msgs []sdk.Msg, from string) (string, error) {
 		},
 	)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return grpcRes.String(), nil
+	return grpcRes, nil
 }
