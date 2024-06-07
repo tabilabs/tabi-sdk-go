@@ -75,7 +75,7 @@ func (suite *ClientTestSuite) TestSendTxWithBlockMode() {
 			[]sdk.Msg{&banktypes.MsgSend{
 				FromAddress: suite.client.Accounts["node0"],
 				ToAddress:   suite.client.Accounts["committer"],
-				Amount:      sdk.Coins{sdk.NewCoin("atabi", sdk.MustNewDecFromStr("10000").RoundInt())},
+				Amount:      sdk.Coins{sdk.NewCoin("xee", sdk.MustNewDecFromStr("10000").RoundInt())},
 			},
 			},
 		},
@@ -85,6 +85,7 @@ func (suite *ClientTestSuite) TestSendTxWithBlockMode() {
 		suite.Run(tc.name, func() {
 			resp, err := suite.client.SendTxWithBlockMode(tc.msgs, tc.from)
 			suite.Require().NoError(err)
+			suite.T().Logf("Response: %v", resp.TxResponse.Code)
 			suite.T().Logf("Response: %v", resp.TxResponse)
 		})
 	}

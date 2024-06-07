@@ -220,6 +220,13 @@ func (c *Client) SendTx(msgs []sdk.Msg, from string) (*tx.BroadcastTxResponse, e
 		return nil, err
 	}
 
+	if grpcRes.TxResponse.Code != 0 {
+		return grpcRes, fmt.Errorf(
+			"tx failed: response code %d, raw log %s",
+			grpcRes.TxResponse.Code,
+			grpcRes.TxResponse.RawLog)
+	}
+
 	return grpcRes, nil
 }
 
@@ -256,6 +263,13 @@ func (c *Client) SendTxWithBlockMode(msgs []sdk.Msg, from string) (*tx.Broadcast
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	if grpcRes.TxResponse.Code != 0 {
+		return grpcRes, fmt.Errorf(
+			"tx failed: response code %d, raw log %s",
+			grpcRes.TxResponse.Code,
+			grpcRes.TxResponse.RawLog)
 	}
 
 	return grpcRes, nil
