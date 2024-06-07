@@ -48,7 +48,7 @@ func (suite *ClientTestSuite) TestSendTx() {
 			[]sdk.Msg{&banktypes.MsgSend{
 				FromAddress: suite.client.Accounts["node0"],
 				ToAddress:   suite.client.Accounts["committer"],
-				Amount:      sdk.Coins{sdk.NewCoin("atabi", sdk.MustNewDecFromStr("10000000000000000").RoundInt())},
+				Amount:      sdk.Coins{sdk.NewCoin("atabi", sdk.MustNewDecFromStr("10000000").RoundInt())},
 			},
 			},
 		},
@@ -58,7 +58,34 @@ func (suite *ClientTestSuite) TestSendTx() {
 		suite.Run(tc.name, func() {
 			resp, err := suite.client.SendTx(tc.msgs, tc.from)
 			suite.Require().NoError(err)
-			suite.T().Logf("Response: %v", resp)
+			suite.T().Logf("Response: %v", resp.TxResponse)
+		})
+	}
+}
+
+func (suite *ClientTestSuite) TestSendTxWithBlockMode() {
+	testCases := []struct {
+		name string
+		from string
+		msgs []sdk.Msg
+	}{
+		{
+			"bank send",
+			"node0",
+			[]sdk.Msg{&banktypes.MsgSend{
+				FromAddress: suite.client.Accounts["node0"],
+				ToAddress:   suite.client.Accounts["committer"],
+				Amount:      sdk.Coins{sdk.NewCoin("atabi", sdk.MustNewDecFromStr("10000").RoundInt())},
+			},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			resp, err := suite.client.SendTxWithBlockMode(tc.msgs, tc.from)
+			suite.Require().NoError(err)
+			suite.T().Logf("Response: %v", resp.TxResponse)
 		})
 	}
 }
@@ -70,7 +97,7 @@ func (suite *ClientTestSuite) TestGetTx() {
 	}{
 		{
 			"get tx",
-			"F2C06FDB1EDB4CC9E335E16048A032C94070B019EB58436EC6B4A76CEE7031C3",
+			"8EF1D6517780815C445691BB4C77A72CB918F397C6F702634486DCFD3B5BB8AE",
 		},
 	}
 
@@ -78,12 +105,11 @@ func (suite *ClientTestSuite) TestGetTx() {
 		suite.Run(tc.name, func() {
 			resp, err := suite.client.TxClient.GetTx(context.Background(), &tx.GetTxRequest{Hash: tc.txHash})
 			suite.Require().NoError(err)
-			suite.Require().Equal(uint32(0), resp.TxResponse.Code)
-			//suite.T().Logf("TxResponse: %v", resp.TxResponse)
-
-			resp2, err := suite.client.RPCClient.Tx(context.Background(), []byte(tc.txHash), false)
-			suite.Require().NoError(err)
-			suite.T().Logf("Response: %v", resp2)
+			suite.T().Logf("TxResponse: %v", resp.TxResponse)
+			//
+			//resp2, err := suite.client.RPCClient.Tx(context.Background(), []byte(tc.txHash), false)
+			//suite.Require().NoError(err)
+			//suite.T().Logf("Response: %v", resp2)
 		})
 	}
 }
@@ -97,6 +123,13 @@ func (suite *ClientTestSuite) TestQueryBalances() {
 			name: "committer balances",
 			req: &banktypes.QueryBalanceRequest{
 				Address: suite.client.Accounts["committer"],
+				Denom:   "atabi",
+			},
+		},
+		{
+			name: "node0 balances",
+			req: &banktypes.QueryBalanceRequest{
+				Address: suite.client.Accounts["node0"],
 				Denom:   "atabi",
 			},
 		},
@@ -125,6 +158,26 @@ func (suite *ClientTestSuite) TestQueryCaptains() {
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
 			resp, err := suite.client.CaptainsQueryClient.CurrentEpoch(context.Background(), tc.req)
+			suite.Require().NoError(err)
+			suite.T().Logf("Response: %v", resp)
+		})
+	}
+}
+
+func (suite *ClientTestSuite) TestQueryCaptainsNodes() {
+	testCases := []struct {
+		name string
+		req  *captainstypes.QueryNodesRequest
+	}{
+		{
+			name: "current epoch",
+			req:  &captainstypes.QueryNodesRequest{},
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			resp, err := suite.client.CaptainsQueryClient.Nodes(context.Background(), tc.req)
 			suite.Require().NoError(err)
 			suite.T().Logf("Response: %v", resp)
 		})

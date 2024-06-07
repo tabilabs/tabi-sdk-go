@@ -222,3 +222,41 @@ func (c *Client) SendTx(msgs []sdk.Msg, from string) (*tx.BroadcastTxResponse, e
 
 	return grpcRes, nil
 }
+
+// SendTxWithBlockMode broadcasts the transaction with block mode.
+func (c *Client) SendTxWithBlockMode(msgs []sdk.Msg, from string) (*tx.BroadcastTxResponse, error) {
+	factory := DefaultTxFactory()
+
+	err := factory.RetrieveSeqAndNum(c, c.Accounts[from])
+	if err != nil {
+		return nil, err
+	}
+
+	txBuilder, err := factory.BuildUnsignedTx(c, msgs)
+	if err != nil {
+		return nil, err
+	}
+
+	err = factory.SignTx(c, from, txBuilder)
+	if err != nil {
+		return nil, err
+	}
+
+	txBytes, err := c.TxConfig.TxEncoder()(txBuilder.GetTx())
+	if err != nil {
+		return nil, err
+	}
+
+	grpcRes, err := c.TxClient.BroadcastTx(
+		context.Background(),
+		&tx.BroadcastTxRequest{
+			Mode:    tx.BroadcastMode_BROADCAST_MODE_BLOCK,
+			TxBytes: txBytes,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return grpcRes, nil
+}
