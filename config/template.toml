@@ -1,6 +1,13 @@
+# Tabi SDK client configuration template.
+# Copy this file, fill in the placeholders, and pass its path to client.NewClient.
+
 [chain]
+# Target chain id and node endpoints.
+# grpc_addr: the Cosmos gRPC endpoint (:9090). node_addr: the Tendermint RPC endpoint (:26657).
 chain_id = "tabi_9789-1"
 grpc_addr = "localhost:9090"
+# Required: the SDK initializes its RPC client from this endpoint.
+node_addr = "http://localhost:26657"
 
 [tx]
 gas_limit = 4000000
@@ -9,10 +16,15 @@ fee_denom = "atabi"
 
 [keyring]
 dir = "../../keyring-dir"
+# SECURITY: the "test" backend stores unencrypted keys on disk. Never use it in
+# production; prefer the "os" or "file" backend with a strong password.
 backend = "test"
 
 [[accounts]]
 name = "alice0"
+# SECURITY: never commit a real mnemonic to this file. Consider importing the
+# account into the keyring once (via `keys add --recover`) instead of keeping
+# the mnemonic persisted in configuration.
 mnemonic = "SET YOUR MNEMONIC"
 coin_type = 60
 account_index = 0

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/BurntSushi/toml"
 )
 
@@ -41,9 +43,12 @@ var (
 	ClientConfig Config
 )
 
-// ReadConfig reads the config file and sets the ClientConfig
-func ReadConfig(path string) {
+// ReadConfig reads the config file and sets the ClientConfig.
+// It returns an error instead of panicking so callers with a malformed or
+// missing path get a normal error value they can handle.
+func ReadConfig(path string) error {
 	if _, err := toml.DecodeFile(path, &ClientConfig); err != nil {
-		panic("failed to read config file: " + err.Error())
+		return fmt.Errorf("failed to read config file: %w", err)
 	}
+	return nil
 }

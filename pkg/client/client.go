@@ -1,10 +1,10 @@
 package client
 
-import "C"
 import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -30,6 +30,13 @@ import (
 	tokenconverttypes "github.com/tabilabs/tabi/x/token-convert/types"
 
 	"github.com/tabilabs/tabi-sdk-go/pkg/config"
+)
+
+const (
+	// Maximum time awaited RPC responses may take before the call is aborted.
+	defaultBroadcastTimeout = 30 * time.Second
+	// Block-mode broadcasts wait for commit, so they get a longer deadline.
+	defaultBroadcastBlockTimeout = 5 * time.Minute
 )
 
 type Client struct {
@@ -60,7 +67,9 @@ type Client struct {
 
 // NewClient creates a new client with config path.
 func NewClient(path string) (*Client, error) {
-	config.ReadConfig(path)
+	if err := config.ReadConfig(path); err != nil {
+		return nil, err
+	}
 	return newClient()
 }
 
@@ -88,7 +97,11 @@ func newClient() (*Client, error) {
 		return nil, err
 	}
 
-	c.initChainClients()
+	// Propagate chain client construction failures instead of returning a
+	// client whose RPC/query clients silently failed to initialize.
+	if err := c.initChainClients(); err != nil {
+		return nil, err
+	}
 
 	return &c, nil
 }
@@ -165,8 +178,9 @@ func (c *Client) initAccounts() error {
 		hdPath := hd.CreateHDPath(acc.CoinType, acc.AccountIndex, acc.AddressIndex).String()
 		_, err := c.Keyring.NewAccount(acc.Name, acc.Mnemonic, "", hdPath, tabihd.EthSecp256k1)
 		if err != nil {
-			// we just log error if account already exists
-			fmt.Println("warning but never mind: ", err)
+			// Recovery path: clear the failure so operators notice mnemonic
+			// or HD-path problems instead of silently continuing.
+			fmt.Printf("warning: failed to create account %q for path %s: %v\n", acc.Name, hdPath, err)
 		}
 
 		record, err := c.Keyring.Key(acc.Name)
@@ -185,11 +199,25 @@ func (c *Client) initAccounts() error {
 	return nil
 }
 
+// accountAddress validates that the named account exists and returns its address.
+func (c *Client) accountAddress(from string) (string, error) {
+	addr, ok := c.Accounts[from]
+	if !ok {
+		return "", fmt.Errorf("unknown account %q: not initialized via config", from)
+	}
+	return addr, nil
+}
+
 // SendTx broadcasts the transaction but accept msgs.
 func (c *Client) SendTx(msgs []sdk.Msg, from string) (*tx.BroadcastTxResponse, error) {
 	factory := DefaultTxFactory()
 
-	err := factory.RetrieveSeqAndNum(c, c.Accounts[from])
+	addr, err := c.accountAddress(from)
+	if err != nil {
+		return nil, err
+	}
+
+	err = factory.RetrieveSeqAndNum(c, addr)
 	if err != nil {
 		return nil, err
 	}
@@ -209,8 +237,12 @@ func (c *Client) SendTx(msgs []sdk.Msg, from string) (*tx.BroadcastTxResponse, e
 		return nil, err
 	}
 
+	// Bound the broadcast call so a stalled node cannot block the caller forever.
+	ctx, cancel := context.WithTimeout(context.Background(), defaultBroadcastTimeout)
+	defer cancel()
+
 	grpcRes, err := c.TxClient.BroadcastTx(
-		context.Background(),
+		ctx,
 		&tx.BroadcastTxRequest{
 			Mode:    tx.BroadcastMode_BROADCAST_MODE_SYNC,
 			TxBytes: txBytes,
@@ -234,7 +266,12 @@ func (c *Client) SendTx(msgs []sdk.Msg, from string) (*tx.BroadcastTxResponse, e
 func (c *Client) SendTxWithBlockMode(msgs []sdk.Msg, from string) (*tx.BroadcastTxResponse, error) {
 	factory := DefaultTxFactory()
 
-	err := factory.RetrieveSeqAndNum(c, c.Accounts[from])
+	addr, err := c.accountAddress(from)
+	if err != nil {
+		return nil, err
+	}
+
+	err = factory.RetrieveSeqAndNum(c, addr)
 	if err != nil {
 		return nil, err
 	}
@@ -254,8 +291,13 @@ func (c *Client) SendTxWithBlockMode(msgs []sdk.Msg, from string) (*tx.Broadcast
 		return nil, err
 	}
 
+	// Block mode waits for commit, so it needs a longer deadline than a sync
+	// broadcast — but it still must not block forever on a stalled node.
+	ctx, cancel := context.WithTimeout(context.Background(), defaultBroadcastBlockTimeout)
+	defer cancel()
+
 	grpcRes, err := c.TxClient.BroadcastTx(
-		context.Background(),
+		ctx,
 		&tx.BroadcastTxRequest{
 			Mode:    tx.BroadcastMode_BROADCAST_MODE_BLOCK,
 			TxBytes: txBytes,

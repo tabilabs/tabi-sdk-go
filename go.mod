@@ -7,6 +7,7 @@ require (
 	github.com/cosmos/cosmos-sdk v0.46.15
 	github.com/stretchr/testify v1.8.2
 	github.com/tabilabs/tabi v1.0.0-alpha2
+	github.com/tendermint/tendermint v0.34.29
 	google.golang.org/grpc v1.54.0
 )
 
@@ -141,7 +142,6 @@ require (
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/tendermint/go-amino v0.16.0 // indirect
-	github.com/tendermint/tendermint v0.34.29 // indirect
 	github.com/tendermint/tm-db v0.6.7 // indirect
 	github.com/tidwall/btree v1.5.0 // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect
@@ -186,8 +186,6 @@ replace (
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// replace broken goleveldb
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
-
-	github.com/tabilabs/tabi => /Users/taramaorisky/Codeland/cosmos/tabilabs/tabi
 	// use cometbft
 	github.com/tendermint/tendermint => github.com/cometbft/cometbft v0.34.29
 )
